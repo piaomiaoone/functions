@@ -1,0 +1,493 @@
+<!DOCTYPE>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
+	<title>ajax</title>
+</head>
+<body>
+	<button data-role='ajax'>Ajax</button>
+	<div class="content">
+	
+	</div>
+<script src="http://code.jquery.com/jquery-latest.js"></script>
+<script type="text/javascript">
+	var rigel = {
+		"ajax": function(url, data, success) {
+			jQuery.ajax({
+				url: url,
+				data: data,
+				type: 'POST',
+				dataType: 'json',
+				success: function(res) {
+					if (res && res.status === 0) {
+						success(res.data, res);
+					} else {
+						alert(res.statusInfo);
+					}
+				}
+			})
+		}
+	}
+	var JQFUNS = {
+		"runFun": {
+			"ajax": function(id) {
+				$('#' + id).on('click', function(e) {
+					e.preventDefault();
+					getContent('../data/ajax.json');
+				})
+			},
+			"getContent": function(el) {
+				rigel.ajax(el, '', function(res) {
+					$('#' + id).html(res);
+				})
+			},
+			"reset": function(id) {
+				$('#' + id).html('');
+			}
+		}
+	};
+	var ajax = function(url, options) {
+			//如果url是对象的话，冒充1.5版本之前的方法                 -->$.ajax({url:"xx",data:{},})
+			if (typeof url === "object") {
+				options = url;
+				url = undefined;
+			}
+			//强制设置options成为一个对象                           -->options为对象
+			options = options || {};
+			//这里创建了ajax的很多私有变量
+			var //创建最终的ajax参数对象s
+				s = jQuery.ajaxSetup({}, options),
+				// 通过$.ajaxSetup改变默认的参数配置， 返回给s.
+				// Callbacks context
+			callbackContext = s.context || s,
+			// Context for global events
+			// It's the callbackContext if one was provided in the options
+			//如果是Dom node或者jQuery collection
+			globalEventContext = callbackContext !== s &&
+				(callbackContext.nodeType || callbackContext instanceof jQuery) ?
+				jQuery(callbackContext) : jQuery.event,
+			// 创建一个deferred对象
+			deferred = jQuery.Deferred(), // 使用到了Deferred对象
+			completeDeferred = jQuery._Deferred(),
+			// Status-dependent callbacks
+			//一组数值的HTTP代码和函数对象，当响应时调用了相应的代码 如$.ajax({statusCode: {404: function() {alert('page not found');}});
+			默认为空对象
+			statusCode = s.statusCode || {}, // 这里我们传了一个 statusCode: {
+				200: function() {}..
+			}
+			// ifModified key
+			ifModifiedKey,
+			// 请求头部 (they are sent all at once)
+			requestHeaders = {},
+			requestHeadersNames = {},
+			// 响应 headers
+			responseHeadersString,
+			responseHeaders,
+			// transport
+			transport,
+			//请求超时时间，异步请求下请求多少时间后中止请求,
+			timeoutTimer,
+			// timeout: 10000
+			// 判断是否是跨域请求的变量
+			parts,
+			// jqXHR state
+			state = 0,
+			// To know if global events are to be dispatched
+			fireGlobals,
+			// Loop variable
+			i,
+			//伪劣的jqXHR,                                                    -->这里就是返回的jqXHR对象,初始一些key
+			jqXHR = {
+
+				readyState: 0,
+
+				/*设置dataType,达到预期服务器返回的数据类型，，jQuery 将自动根据 HTTP 包 MIME 信息来智能判断
+				 */
+				setRequestHeader: function(name, value) {
+					//这里状态还为0，表示还在发送请求前，设置请求头
+					if (!state) {
+						var lname = name.toLowerCase();
+						name = requestHeadersNames[lname] = requestHeadersNames[lname] || name;
+						requestHeaders[name] = value; //私有requestHeadersNames
+					}
+					return this;
+				},
+
+				// Raw string
+				getAllResponseHeaders: function() {
+					return state === 2 ? responseHeadersString : null;
+				},
+
+				// Builds headers hashtable if needed
+				getResponseHeader: function(key) {
+					var match;
+					if (state === 2) {
+						if (!responseHeaders) {
+							responseHeaders = {};
+							while ((match = rheaders.exec(responseHeadersString))) {
+								responseHeaders[match[1].toLowerCase()] = match[2];
+							}
+						}
+						match = responseHeaders[key.toLowerCase()];
+					}
+					return match === undefined ? null : match;
+				},
+
+				// Overrides response content-type header
+				overrideMimeType: function(type) {
+					if (!state) {
+						s.mimeType = type;
+					}
+					return this;
+				},
+
+				// Cancel the request
+				abort: function(statusText) {
+					statusText = statusText || "abort";
+					if (transport) {
+						transport.abort(statusText);
+					}
+					done(0, statusText);
+					return this;
+				}
+			};
+
+			/* Callback for when everything is done, jQuery作者喜欢函数里嵌套函数,局部调用方便
+			 * 2: request received
+			 * 4: request finished and response is ready   <---readyState
+			 * 200: "OK"
+			 * 404: Page not found                         <----status
+			 */
+			function done(status, nativeStatusText, responses, headers) {
+				// 这个done函数写到这个函数的内部， 处理不同状态的req，
+				//其实这个写法改成var done = function() {}
+				//更好
+				// 请求状态为2，表面已经请求过一次，立即返回                          -->我是分析到下面回来的 ,第一次请求默认的state=0
+				if (state === 2) {
+					return;
+				}
+
+				// State is "done" now
+				state = 2;
+				// 哦， 处理了， 为什么是2呢， 因为XMLHttpRequest 状态为2的意思是
+				request received
+
+
+				// 如果存在超时请求中止，清楚这个timeout
+				if (timeoutTimer) {
+					// timeout有用了， 这里被清除了~ _~, 我都响应请求了， 肯定得把你删了
+					clearTimeout(timeoutTimer);
+				}
+
+				// Dereference transport for early garbage collection
+				// (no matter how long the jqXHR object will be used)
+				transport = undefined;
+
+				// Cache response headers
+				responseHeadersString = headers || "";
+
+				// Set readyState
+				jqXHR.readyState = status > 0 ? 4 : 0;
+
+				var isSuccess,
+					success,
+					error,
+					statusText = nativeStatusText,
+					response = responses ? ajaxHandleResponses(s, jqXHR, responses) : undefined,
+					lastModified,
+					etag;
+
+				// If successful, handle type chaining
+				if (status >= 200 && status < 300 || status === 304) {
+					// 服务器成功处理了 我们的状态是200
+
+					// Set the If-Modified-Since and/or If-None-Match header, if in ifModified mode.
+					if (s.ifModified) {
+
+						if ((lastModified = jqXHR.getResponseHeader("Last-Modified"))) {
+							jQuery.lastModified[ifModifiedKey] = lastModified;
+						}
+						if ((etag = jqXHR.getResponseHeader("Etag"))) {
+							jQuery.etag[ifModifiedKey] = etag;
+						}
+					}
+
+					// If not modified
+					if (status === 304) {
+
+						statusText = "notmodified";
+						isSuccess = true;
+
+						// If we have data
+					} else {
+
+						try {
+							success = ajaxConvert(s, response);
+							// 200状态， isSucess = true
+							statusText = "success";
+							isSuccess = true;
+						} catch (e) {
+							// We have a parsererror
+							statusText = "parsererror";
+							error = e;
+						}
+					}
+				} else {
+					// We extract error from statusText
+					// then normalize statusText and status for non-aborts
+					error = statusText;
+					if (!statusText || status) {
+						statusText = "error";
+						if (status < 0) {
+							status = 0;
+						}
+					}
+				}
+
+				//设置jqXHR.status 其实也就是XMLHttpRequest状态
+				jqXHR.status = status;
+				// 哦， 这里设置了jqXHR的状态了 200
+				jqXHR.statusText = "" + (nativeStatusText || statusText);
+
+				// 成功请求 resolveWith
+				if (isSuccess) {
+					deferred.resolveWith(callbackContext, [success, statusText, jqXHR]);  //成功了， 当然得resolveWith， 是不是发现done或者
+					//success进来的函数一个个执行了 ^ _ ^
+				} else { //失败请求 rejectWith                                  
+					// resolve意味着什么？ 意味后面不管你done().done() 多少都会被直接触发~ _~
+					deferred.rejectWith(callbackContext, [jqXHR, statusText, error]);
+				}
+
+				// 状态参数代码,默认为空                                                             
+				jqXHR.statusCode(statusCode);
+				statusCode = undefined;
+
+				if (fireGlobals) {
+					globalEventContext.trigger("ajax" + (isSuccess ? "Success" : "Error"), [jqXHR, s, isSuccess ? success : error]);
+				}
+
+				// 不管请求成功与否都执行的complete  resolveWith
+				completeDeferred.resolveWith(callbackContext, [jqXHR, statusText]);
+				// 原来$.ajax().complete在这里调用， 所以不管成功没有都resolve了
+
+				if (fireGlobals) {
+					globalEventContext.trigger("ajaxComplete", [jqXHR, s]);
+					// Handle the global AJAX counter
+					if (!(--jQuery.active)) {
+						jQuery.event.trigger("ajaxStop");
+					}
+				}
+			}
+
+			// 给这个jqXHR对象附上deferred对象的只读方法，包括done,always,isResolved等等，这里表明了，为什么$.ajax过后
+			//我们可以使用sucess,error,complete方法
+			deferred.promise(jqXHR);
+			jqXHR.success = jqXHR.done;
+			// 作者为了让我们更好的调用， 又多了3个借口， 哎， 其实可以直接不需要的
+			jqXHR.error = jqXHR.fail;
+			jqXHR.complete = completeDeferred.done;
+
+			// Status-dependent callbacks 其实这个参数变量很少用,不过还可以，目前可以触发两个状态的statusCode: {200: function ()                       
+			//{ console.log("request ok") }, 404: function () { console.log("page not found")} }
+			jqXHR.statusCode = function(map) {
+				// map = {
+					200: "..",
+					0: ".."
+				}
+				if (map) {
+					var tmp; //临时函数变量
+					if (state < 2) {
+						for (tmp in map) {
+							statusCode[tmp] = [statusCode[tmp], map[tmp]];
+						}
+					} else {
+						tmp = map[jqXHR.status]; //jqXHR返回相应的callback,然后调用then方法触发    
+						// 我们的状态代码在这里调用, 通过jqXHR.then方法调用
+
+						jqXHR.then(tmp, tmp);
+					}
+				}
+				return this;
+			};
+
+			// Add protocol if not provided (#5866: IE7 issue with protocol-less urls)
+			// We also use the url parameter if available
+			//  Remove 将url的hash去掉 rhash=/#.*$/ rprotocol = /^\/\//  ajaxLocParts[1]="http:"
+			s.url = ((url || s.url) + "").replace(rhash, "").replace(rprotocol, ajaxLocParts[1] + "//");
+
+			// 取出dataTypes list，不存在则为*  rspacesAjax = /\s+/ 如:s.dataType=[*]
+			s.dataTypes = jQuery.trim(s.dataType || "*").toLowerCase().split(rspacesAjax);
+
+			//默认设置crossDomain 同域请求为false， 跨域请求为true,如果想强制跨域请求（如JSONP形式）同一域，设置crossDomain为true
+			if (s.crossDomain == null) {
+				//同ajaxLocParts变量,这里也是通过这个请求的url来判断是否是跨域请求
+				parts = rurl.exec(s.url.toLowerCase());
+				//这里来判断是否是跨域请求,又是!! 主要判断请求的url parts与 ajaxLocParts      -->这里智能判断你的请求地址是否是跨越，很
+				//牛气吧， 这里我们的corssDomain为true
+
+				s.crossDomain = !!(parts &&
+					(parts[1] != ajaxLocParts[1] || parts[2] != ajaxLocParts[2] ||
+						(parts[3] || (parts[1] === "http:" ? 80 : 443)) !=
+						(ajaxLocParts[3] || (ajaxLocParts[1] === "http:" ? 80 : 443)))
+				);
+			}
+
+			//如果存在data参数并且 processData=true&&s.data为一个对象吧           -->我们没传data参数,processData参数默认为true，
+			//表示默认序列化参数data
+			if (s.data && s.processData && typeof s.data !== "string") {
+				//调用序列化函数
+				s.data = jQuery.param(s.data, s.traditional);
+			}
+
+			// Apply prefilters
+			inspectPrefiltersOrTransports(prefilters, s, options, jqXHR);
+			// 发送请求前， 调用过滤器将
+
+			// If request was aborted inside a prefiler, stop there
+			if (state === 2) {
+				return false;
+			}
+
+			// We can fire global events as of now if asked to
+			fireGlobals = s.global;
+
+			// Uppercase the type
+			s.type = s.type.toUpperCase();
+
+			// Determine if request has content
+			//rnoContent= /^(?:GET|HEAD)$/
+			s.hasContent = !rnoContent.test(s.type);
+
+			// Watch for a new set of requests
+			if (fireGlobals && jQuery.active++ === 0) {
+				jQuery.event.trigger("ajaxStart");
+			}
+
+			// More options handling for requests with no content
+			if (!s.hasContent) {
+
+				//如果data参数存在,则append to url
+				if (s.data) {
+					// 我们以前是不是喜欢xx.php ? data = "xx" && ..这里会把序列化
+					//后的data传到问号后面， 很简单吧
+					//rquery = /\?/请求的url是否存在"?" 就比如请求"user.php?"    -->这就是为什么data参数会被传到url？后面
+
+
+					s.url += (rquery.test(s.url) ? "&" : "?") + s.data;
+					// #9682: remove data so that it's not used in an eventual retry
+					delete s.data;
+				}
+
+				// Get ifModifiedKey before adding the anti-cache parameter
+				ifModifiedKey = s.url;
+
+				// Add anti-cache in url if needed
+				if (s.cache === false) {
+
+					var ts = jQuery.now(),
+						// try replacing _= if it is there
+						ret = s.url.replace(rts, "$1_=" + ts);
+
+					// if nothing was replaced, add timestamp to the end
+					s.url = ret + ((ret === s.url) ? (rquery.test(s.url) ? "&" : "?") + "_=" + ts : "");
+				}
+			}
+
+			// Set the correct header, if data is being sent
+			if (s.data && s.hasContent && s.contentType !== false || options.contentType) {
+				jqXHR.setRequestHeader("Content-Type", s.contentType);
+			}
+
+			// Set the If-Modified-Since and/or If-None-Match header, if in ifModified mode.
+			if (s.ifModified) {
+				ifModifiedKey = ifModifiedKey || s.url;
+				if (jQuery.lastModified[ifModifiedKey]) {
+					jqXHR.setRequestHeader("If-Modified-Since", jQuery.lastModified[ifModifiedKey]);
+				}
+				if (jQuery.etag[ifModifiedKey]) {
+					jqXHR.setRequestHeader("If-None-Match", jQuery.etag[ifModifiedKey]);
+				}
+
+
+
+			}
+
+
+			/*设置dataType,达到预期服务器返回的数据类型，如果没有dataType参数，jQuery 将自动根据 HTTP 包 MIME 信息来智能判断
+              默认的s.accepts=  accepts: {xml: "application/xml, text/xml",
+              html: "text/html",text: "text/plain",json: "application/json, text/javascript","*": allTypes}  
+              allTypes= ['*\/']+['*']  如果设置了dataType参数,即 s.dataTypes = jQuery.trim(s.dataType || "*").toLowerCase().split(/\s+/);
+               比如：$(url,{dataType:"json"}) 这里第二个参数将成为 "application/json, text/javascript"+",*\/*;q=0.01"
+            */
+			jqXHR.setRequestHeader(
+				"Accept",
+				s.dataTypes[0] && s.accepts[s.dataTypes[0]] ?
+				s.accepts[s.dataTypes[0]] + (s.dataTypes[0] !== "*" ? ", " + allTypes + "; q=0.01" : "") :
+				s.accepts["*"]
+			);
+			//检查头部是否是指了参数 s.headers={} 一个额外的"{键:值}"对映射到请求一起发送                    -->我们没设置头部
+			for (i in s.headers) {
+				jqXHR.setRequestHeader(i, s.headers[i]);
+			}
+
+			// Allow custom headers/mimetypes and early abort
+			if (s.beforeSend && (s.beforeSend.call(callbackContext, jqXHR, s) === false || state === 2)) {
+				// Abort if not done already
+				jqXHR.abort();
+				return false;
+
+			}
+
+			//$.ajax().success(callback).error(callback).complete(callback) 在这里增加callback，这里表面现在的ajax请求可以不止一个回调函数
+			for (i in {
+				success: 1,
+				error: 1,
+				complete: 1
+			}) {
+				jqXHR[i](s[i]);
+			}
+
+			// Get transport
+			transport = inspectPrefiltersOrTransports(transports, s, options, jqXHR);
+
+			// If no transport, we auto-abort
+			if (!transport) {
+				done(-1, "No Transport");
+			} else {
+				jqXHR.readyState = 1;
+				// Send global event
+				if (fireGlobals) {
+					globalEventContext.trigger("ajaxSend", [jqXHR, s]);
+				}
+				// Timeout设置请求超时时间（毫秒）,超时请求后，jqXHR.abort() 中止请求,简单的意思就是在指定的时间内还未响应，停止请求
+				if (s.async && s.timeout > 0) {
+					timeoutTimer = setTimeout(function() {
+						 //这里知道我们为什么设置timeout了吧， 就是如果在timeout时间内还没请求到数据
+						jqXHR.abort("timeout");
+						//肯定得停止了， 如何停止的， 得看abort.提前是我们设置了这个参数并且是异步请求
+					}, s.timeout);
+				}
+
+				try {
+					state = 1;
+					transport.send(requestHeaders, done);
+					// 这个方法就能知道jQuery是如何异步跨越请求这个js文件的， 见下面分析
+				} catch (e) {
+					// Propagate exception as error if not done
+					if (state < 2) {
+						// 处理上面这个方法的异常， 万一你传得url不存在呢。。。
+						done(-1, e);
+						// Simply rethrow otherwise
+					} else {
+						jQuery.error(e);
+					}
+				}
+			}
+
+			return jqXHR;
+			 //分析到这里， 怎么办了？ 其实看出来， 我们只分析了$.ajax() 并没用分析后面那段链式操作,
+		},
+		//还有js文件怎么请求的， 请求到哪儿了？ 先回到上面的done方法
+</script>
+</body>
+</html>
