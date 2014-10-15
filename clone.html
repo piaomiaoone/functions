@@ -1,0 +1,31 @@
+<!DOCTYPE>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
+	<title>clone</title>
+</head>
+<body>
+	<div class="demoarea" id="clone"></div>
+
+<script src="http://code.jquery.com/jquery-latest.js"></script>
+<script type="text/javascript">
+	var JQFUNS = {
+		"clone": {
+			"run": function(id){
+				var domeBox = $('#' + id );
+				domeBox.empty();
+				domeBox.append('<a>Clone</a>');
+				domeBox.append('教育');
+				$('#' + id ).live('click', function(e){
+					e.preventDefault();
+					$('#' + id ).clone().appendTo(domeBox);
+				});
+			},
+			"reset": function(id){
+				$('#' + id ).html('');
+			}
+		}
+	}
+</script>
+</body>
+</html>
