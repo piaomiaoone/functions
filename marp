@@ -1,0 +1,9 @@
+var mm = {};
+        for (var i =0; i < infoarr.length; ++i){
+            var ifo = infoarr[i];
+            if(typeof mm[ifo.shopId] == 'undefined' || mm[ifo.shopId] == null){
+              mm[ifo.shopId] = [];
+            }
+            mm[ifo.shopId].push(ifo);
+
+        }
